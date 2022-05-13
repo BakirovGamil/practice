@@ -21,12 +21,27 @@ function App() {
     newDraw.on('drawend', (e) => {
       const numberOfPoints = points.length;
       points.push(e.feature);
-      console.log(points);
 
       if(numberOfPoints + 1 === 2) {
         map.removeInteraction(newDraw);
         const geoJson = (new GeoJSON()).writeFeaturesObject(points);
-        console.log(geoJson);
+
+        (async function () {
+          const response = await fetch("http://192.168.1.161:12333", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(geoJson),
+          });
+
+          if(response.ok) {
+            const text = await response.text();
+            console.log(text);
+          } else {
+            console.log(response.status);
+          }
+        })();
       }
     });
 
