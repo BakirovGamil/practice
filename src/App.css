@@ -19,15 +19,51 @@ html, body, #root, .wrapper, .main {
   padding: 15px;
 }
 
-.main__addBtn {
+.main__btn {
   background: none;
   border: 1px solid black;
   border-radius: 5px;
   cursor: pointer;
   width: 100%;
-  padding: 5px 10px;
+  padding: 7px 10px;
+  font-size: 16px;
 }
 
 .main__body {
   flex: 1 1 auto;
+}
+
+.main__btn {
+  margin: 0 0 10px 0;
+}
+
+.main__layers {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid rgb(240, 240, 240);
+  box-shadow: 0 0 5px -5px rgba(0, 0, 0, 0.8);
+  padding: 7px 15px;
+  border-radius: 5px;
+  margin: 0 0 10px 0;
+}
+
+.layers__btn {
+  background: rgb(255, 255, 255);
+  border: 1px solid black;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 16px;
+  margin: 0 0 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+.main__layers-title {
+  font-size: 20px;
+  margin: 0 0 10px 0;
 }

@@ -6,7 +6,7 @@ import {fromLonLat} from 'ol/proj';
 import {Tile as TileLayer,  Vector as VectorLayer} from 'ol/layer';
 import {OSM,  Vector as VectorSource} from 'ol/source';
 
-function MapWrapper({setParentMap, setParentSource}) {
+function MapWrapper({setParentMap, setParentSource, setParentLayer}) {
     const mapContainerRef = useRef();
 
     useEffect(() => {
@@ -33,7 +33,8 @@ function MapWrapper({setParentMap, setParentSource}) {
         });
 
         setParentMap(map);
-        setParentSource(source);
+        // setParentSource(source);
+        // setParentLayer(vector);
 
         return () => {
           mapContainer.innerHTML = "";
