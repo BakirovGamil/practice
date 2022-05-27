@@ -12,12 +12,15 @@ import cogoToast from 'cogo-toast';
 import MultiLineString from 'ol/geom/MultiLineString';
 import {Vector as VectorLayer} from 'ol/layer';
 import {Vector as VectorSource} from 'ol/source';
+import { buffer, booleanPointInPolygon, point, toWgs84, toMercator} from '@turf/turf';
 
 function App() {
   const [map, setMap] = useState(null);
   const [draw, setDraw] = useState(null);
   const [layerOfPoints, setLayerOfPoints] = useState(null);
   const [layerOfRoute, setLayerOfRoute] = useState(null);
+  const [nodeCoordinates, setNodeCoordinates] = useState(null);
+  const [links, setLinks] = useState(null);
 
   function addInteraction() {
     const vectorSource = new VectorSource({wrapX: false});
@@ -44,7 +47,7 @@ function App() {
 
         (async function () {
           try {
-            const response = await fetch("http://192.168.1.161:3000/getGrid", {
+            const response = await fetch("http://localhost:3000/getGrid", {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json;charset=utf-8'
@@ -54,18 +57,15 @@ function App() {
             
             if(response.ok) {
               const links = await response.json();
-              addGrid(links, newLayerOfPoints);
+              setLinks(links);
 
-              const foundPath = findPath(links, "0", "48");
-              const fetureOfRoute = getFeatureOfRoute(links, foundPath);
-              const layerOfRoute = new VectorLayer({
-                source: new VectorSource({
-                    features: [fetureOfRoute]
-                })
-              });
-        
-              map.addLayer(layerOfRoute);
-              setLayerOfRoute(layerOfRoute);
+              let coordinates = {};
+              for(let link of links) {
+                coordinates = {...coordinates, [link.startId]: link.coordinateStart, [link.endId]: link.coordinateEnd};
+              }
+              setNodeCoordinates(coordinates);
+
+              addGrid(links, newLayerOfPoints);
             } else {
               cogoToast.warn("Проблема с сервером");
             }
@@ -83,13 +83,7 @@ function App() {
   function getFeatureOfRoute(links, foundPath) {
     const arrayOfCoord = [];
     foundPath.forEach(node => {
-      let coordinateOfNode = null;
-      coordinateOfNode = links.find(link => node.id === link.startId)?.coordinateStart;
-      if(!coordinateOfNode)
-        coordinateOfNode = links.find(link => node.id === link.endId)?.coordinateEnd;
-
-      console.log(coordinateOfNode);
-      arrayOfCoord.push(coordinateOfNode);
+      arrayOfCoord.push(nodeCoordinates[node.id]);
     });
 
     const multiLineString = new MultiLineString([arrayOfCoord]);
@@ -143,6 +137,8 @@ function App() {
   function clearMap() {
     clearLayer(layerOfPoints);
     clearLayer(layerOfRoute);
+    setLayerOfPoints(null);
+    setLayerOfRoute(null);
   }
 
   function findPath(links, fromNodeId, toNodeId) {
@@ -150,10 +146,6 @@ function App() {
     for(let link of links) {
       graph.addLink(link.startId, link.endId, {weight: link.weight});
     }
-
-    graph.forEachNode(function(link) {
-      console.log(link.id)
-    });
 
     const pathFinder = path.aStar(graph, {
       distance(fromNode, toNode, link) {
@@ -171,11 +163,76 @@ function App() {
     return foundPath;
   }
 
+  function buildRoute() {
+    if(layerOfRoute) return;
+
+    const newDraw = new Draw({
+      source: layerOfPoints.getSource(),
+      type: "Point",
+    
+    });
+    map.addInteraction(newDraw);
+    
+    const points = [];
+    newDraw.on('drawend', (e) => {
+      const coordOfPoint = e.feature.getGeometry().flatCoordinates;
+      points.push(coordOfPoint);
+
+      if(points.length === 2) {
+        map.removeInteraction(newDraw)
+        
+        const firstPoint = toWgs84(point(points[0]));
+        const secondPoint = toWgs84(point(points[1]));
+
+        console.log(firstPoint);
+
+        console.log(points[0]);
+        console.log(points[1]);
+
+        const bufferOfFristPoint = toMercator(buffer(firstPoint, 1000, {units: "meters"}));
+        const bufferOfSecondPoint = toMercator(buffer(secondPoint, 1000, {units: "meters"}));
+
+        const bufferFeatureFirts = (new GeoJSON()).readFeature(bufferOfFristPoint);
+        const bufferFeatureSecond = (new GeoJSON()).readFeature(bufferOfSecondPoint);
+        console.log(bufferFeatureFirts);
+
+        layerOfPoints.getSource().addFeature(bufferFeatureFirts);
+
+        const arrayOfPointInFirstBuffer = [];
+        const arrayOfPointInSecondBuffer = [];
+        
+        for(let [id, coordinate] of Object.entries(nodeCoordinates)) {
+          const pointOfNode = point(coordinate);
+
+          const isInFirstBuffer = booleanPointInPolygon(pointOfNode, bufferOfFristPoint);
+          if(isInFirstBuffer) arrayOfPointInFirstBuffer.push({id, coordinate});
+
+          const isInSecondBuffer = booleanPointInPolygon(pointOfNode, bufferOfSecondPoint);
+          if(isInSecondBuffer) arrayOfPointInSecondBuffer.push({id, coordinate});
+        }
+
+        console.log(arrayOfPointInFirstBuffer);
+        console.log(arrayOfPointInSecondBuffer);
+      }
+    });
+
+    // const foundPath = findPath(links, "0", "48");
+    // const fetureOfRoute = getFeatureOfRoute(links, foundPath);
+    // const newlayerOfRoute = new VectorLayer({
+    //   source: new VectorSource({
+    //       features: [fetureOfRoute]
+    //   })
+    // });
+    // map.addLayer(newlayerOfRoute);
+    // setLayerOfRoute(newlayerOfRoute);
+  }
+
   return (
     <div className="wrapper">
       <main className='main'>
         <div className='main__sidebar'>
           <button className='main__addBtn main__btn' onClick={addPoints}>Добавить точки</button>
+          <button className='main__addBtn main__btn' onClick={buildRoute}>Построить маршрут</button>
           <button className='main__clrBtn main__btn' onClick={clearMap}>Очистить карту</button>
           <div className='main__layers'>
             <div className='main__layers-title'>Слои</div>
