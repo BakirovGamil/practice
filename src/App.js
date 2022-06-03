@@ -21,6 +21,7 @@ function App() {
   const [layerOfRoute, setLayerOfRoute] = useState(null);
   const [nodeCoordinates, setNodeCoordinates] = useState(null);
   const [links, setLinks] = useState(null);
+  const [foundPath, setFoundPath] = useState(null);
 
   function addInteraction() {
     const vectorSource = new VectorSource({wrapX: false});
@@ -47,7 +48,7 @@ function App() {
 
         (async function () {
           try {
-            const response = await fetch("http://localhost:3000/getGrid", {
+            const response = await fetch("http://192.168.1.161:3000/getGrid", {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json;charset=utf-8'
@@ -165,7 +166,7 @@ function App() {
 
   function buildRoute() {
     if(layerOfRoute) return;
-    if(layerOfPoints) return;
+    if(!layerOfPoints) return;
 
     const newDraw = new Draw({
       source: layerOfPoints.getSource(),
@@ -218,6 +219,7 @@ function App() {
         
         const foundPath = findPath(links, arrayOfPointInFirstBuffer[0].id, arrayOfPointInSecondBuffer[0].id);
         const fetureOfRoute = getFeatureOfRoute(links, foundPath);
+        setFoundPath(fetureOfRoute);
         const newlayerOfRoute = new VectorLayer({
           source: new VectorSource({
               features: [fetureOfRoute]
@@ -227,6 +229,25 @@ function App() {
         setLayerOfRoute(newlayerOfRoute);
       }
     });
+  }
+
+  function saveRoute() {
+    console.log(foundPath);
+    if(!layerOfRoute || !foundPath) return cogoToast.error("Сначала нужно найти маршрут");
+
+    (async function() {
+      const res = await fetch("http://192.168.1.161:3000/setRoute", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8'
+        },
+        body: JSON.stringify(foundPath),
+      });
+
+      const resBody = await res.text();
+
+      cogoToast.success(resBody);
+    })();
   }
 
   return (
@@ -247,6 +268,9 @@ function App() {
               <i className="gg-eye"></i>
             </button>
           </div>
+          <button className='main__clrBtn main__btn' onClick={saveRoute}>
+            Сохранить маршрут
+          </button>
         </div>
         <div className='main__body'>
           <MapWrapper setParentMap={setMap}/>
