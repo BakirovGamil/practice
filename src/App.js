@@ -189,14 +189,14 @@ function App() {
         console.log(points[0]);
         console.log(points[1]);
 
-        const bufferOfFristPoint = toMercator(buffer(firstPoint, 1000, {units: "meters"}));
-        const bufferOfSecondPoint = toMercator(buffer(secondPoint, 1000, {units: "meters"}));
+        const bufferOfFristPoint = toMercator(buffer(firstPoint, 500, {units: "meters"}));
+        const bufferOfSecondPoint = toMercator(buffer(secondPoint, 500, {units: "meters"}));
 
         const bufferFeatureFirts = (new GeoJSON()).readFeature(bufferOfFristPoint);
         const bufferFeatureSecond = (new GeoJSON()).readFeature(bufferOfSecondPoint);
-        console.log(bufferFeatureFirts);
 
         layerOfPoints.getSource().addFeature(bufferFeatureFirts);
+        layerOfPoints.getSource().addFeature(bufferFeatureSecond);
 
         const arrayOfPointInFirstBuffer = [];
         const arrayOfPointInSecondBuffer = [];
@@ -211,20 +211,21 @@ function App() {
           if(isInSecondBuffer) arrayOfPointInSecondBuffer.push({id, coordinate});
         }
 
-        console.log(arrayOfPointInFirstBuffer);
-        console.log(arrayOfPointInSecondBuffer);
+        if(arrayOfPointInFirstBuffer.length === 0 || arrayOfPointInSecondBuffer.length === 0) {
+          return cogoToast.error("Кратчайший путь не найден");
+        }
+        
+        const foundPath = findPath(links, arrayOfPointInFirstBuffer[0].id, arrayOfPointInSecondBuffer[0].id);
+        const fetureOfRoute = getFeatureOfRoute(links, foundPath);
+        const newlayerOfRoute = new VectorLayer({
+          source: new VectorSource({
+              features: [fetureOfRoute]
+          })
+        });
+        map.addLayer(newlayerOfRoute);
+        setLayerOfRoute(newlayerOfRoute);
       }
     });
-
-    // const foundPath = findPath(links, "0", "48");
-    // const fetureOfRoute = getFeatureOfRoute(links, foundPath);
-    // const newlayerOfRoute = new VectorLayer({
-    //   source: new VectorSource({
-    //       features: [fetureOfRoute]
-    //   })
-    // });
-    // map.addLayer(newlayerOfRoute);
-    // setLayerOfRoute(newlayerOfRoute);
   }
 
   return (
