@@ -165,6 +165,7 @@ function App() {
 
   function buildRoute() {
     if(layerOfRoute) return;
+    if(layerOfPoints) return;
 
     const newDraw = new Draw({
       source: layerOfPoints.getSource(),
